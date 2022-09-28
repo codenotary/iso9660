@@ -1,4 +1,4 @@
-module github.com/kdomanski/iso9660
+module github.com/codenotary/iso9660
 
 go 1.16
 
