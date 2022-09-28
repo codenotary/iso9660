@@ -162,6 +162,18 @@ func (f *File) GetChildren() ([]*File, error) {
 				continue
 			}
 
+			// use alternative name from Rock Ridge extension, if provided
+			wrkBuf := newDE.SystemUse
+			for tag, buf := getTag(wrkBuf); tag != ""; tag, buf = getTag(wrkBuf) {
+				if tag == "NM" {
+					if buf[1] == 0x00 {	// any set flag value means that alternative name shouldn't be used
+						newDE.Identifier = string(buf[2:])
+					}
+					break
+				}
+				wrkBuf = wrkBuf[len(buf)+3:]
+			}
+
 			newFile := &File{ra: f.ra,
 				de:       newDE,
 				children: nil,
@@ -172,6 +184,17 @@ func (f *File) GetChildren() ([]*File, error) {
 	}
 
 	return f.children, nil
+}
+
+func getTag(buf []byte) (string, []byte) {
+	if len(buf) < 3 {
+		return "", nil
+	}
+	width := int(buf[2])
+	if len(buf) < width {
+		return "", nil
+	}
+	return string(buf[:2]), buf[3:width]
 }
 
 // Reader returns a reader that allows to read the file's data.
