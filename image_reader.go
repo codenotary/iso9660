@@ -83,6 +83,9 @@ func (f *File) Mode() os.FileMode {
 	if f.IsDir() {
 		mode |= os.ModeDir
 	}
+	if f.de.FileFlags & 32 != 0 {
+		mode |= os.ModeSymlink
+	}
 	return mode
 }
 
@@ -162,14 +165,21 @@ func (f *File) GetChildren() ([]*File, error) {
 				continue
 			}
 
-			// use alternative name from Rock Ridge extension, if provided
+			// use Rock Ridge extension to get full name and symbolic link flag
 			wrkBuf := newDE.SystemUse
 			for tag, buf := getTag(wrkBuf); tag != ""; tag, buf = getTag(wrkBuf) {
-				if tag == "NM" {
+				if tag == "PX" {
+					fileMode, err := UnmarshalInt32LSBMSB(buf[1:9])
+					if err != nil {
+						return nil, err
+					}
+					if fileMode & 0120000 == 0120000 {
+						newDE.FileFlags |= 32	// this bit a reserved, set to indicate a symlink
+					}
+				} else if tag == "NM" {
 					if buf[1] == 0x00 {	// any set flag value means that alternative name shouldn't be used
 						newDE.Identifier = string(buf[2:])
 					}
-					break
 				}
 				wrkBuf = wrkBuf[len(buf)+3:]
 			}
